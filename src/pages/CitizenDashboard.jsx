@@ -55,7 +55,23 @@ export default function CitizenDashboard() {
         
         setAnalyzing(true);
         try {
-            const detectionResult = await runRoboflowInference(base64);
+            const rawDetectionResult = await runRoboflowInference(base64);
+            
+            // Filter to ONLY detect Plastic Bottles (PET / bottles)
+            const filteredDetections = rawDetectionResult.detections.filter(
+                det => det.polymer.id === 'PET' || det.polymer.origin?.toLowerCase().includes('bottle')
+            );
+            
+            const totalMass = filteredDetections.reduce((s, d) => s + d.size_um * 0.001, 0);
+            const filteredConcentration = ((totalMass / 10) * 1000).toFixed(1);
+
+            const detectionResult = {
+                ...rawDetectionResult,
+                detections: filteredDetections,
+                totalParticles: filteredDetections.length,
+                concentration: filteredConcentration
+            };
+
             setResult(detectionResult);
             
             // Update stats

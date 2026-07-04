@@ -9,7 +9,7 @@ import {
 const navItems = [
     { to: '/', icon: Home, label: 'Monitor', id: 'nav-monitor' },
     { to: '/scanner', icon: Camera, label: 'AI Scanner', id: 'nav-scanner' },
-    { to: '/ai-camera', icon: Aperture, label: 'AI Camera', id: 'nav-aicamera' },
+    { to: '/ai-camera', icon: Aperture, label: 'AI Photo Uploader', id: 'nav-aicamera' },
     { to: '/family', icon: Users, label: 'Family Safety', id: 'nav-family' },
     { to: '/profile', icon: User, label: 'Inspector', id: 'nav-inspector' },
     { to: '/leaderboard', icon: Globe, label: 'Global Standings', id: 'nav-standings' },
@@ -44,8 +44,8 @@ export default function Sidebar({ isOpen, onClose }) {
         // Family Safety is citizen-only
         if (item.id === 'nav-family' && userRole === 'admin') return false;
         if (userRole === 'admin') return true;
-        // Citizen sees: Monitor, Scanner, Family Safety, Community, Trends, Quiz
-        return ['nav-monitor', 'nav-scanner', 'nav-family', 'nav-community', 'nav-trends', 'nav-quiz'].includes(item.id);
+        // Citizen sees: Monitor, Scanner, AI Photo Uploader, Family Safety, Community, Trends, Quiz
+        return ['nav-monitor', 'nav-scanner', 'nav-aicamera', 'nav-family', 'nav-community', 'nav-trends', 'nav-quiz'].includes(item.id);
     });
 
     return (
