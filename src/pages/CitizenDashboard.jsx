@@ -1,41 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, RefreshCw, ShieldCheck, AlertTriangle, Heart, MessageSquare, Send, CheckCircle2, User, Activity, Plus, MapPin } from 'lucide-react';
+import { Camera, RefreshCw, ShieldCheck, AlertTriangle, Heart, MessageSquare, Send, CheckCircle2, User, Activity, Plus, MapPin, Play, Pause, Video } from 'lucide-react';
 import NeighborMap from '../components/NeighborMap';
 import WaterNewsWidget from '../components/WaterNewsWidget';
 
 export default function CitizenDashboard() {
-    const [scanning, setScanning] = useState(false);
-    const [progress, setProgress] = useState(0);
-    const [result, setResult] = useState(null);
+    const [videoActive, setVideoActive] = useState(false);
+    const [selectedFeed, setSelectedFeed] = useState('Kitchen Tap');
+    const [purityScore, setPurityScore] = useState(98.4);
+    const [pps, setPps] = useState(12);
+    const [flowRate, setFlowRate] = useState(4.2);
+    const [detectedLogs, setDetectedLogs] = useState([
+        { time: '18:42:01', polymer: 'PET', size: '24μm', confidence: '94%', type: 'Fragment' },
+        { time: '18:42:03', polymer: 'Nylon', size: '85μm', confidence: '89%', type: 'Fiber' }
+    ]);
     const [complaint, setComplaint] = useState({ type: 'General', details: '', healthAffected: false });
     const [submitted, setSubmitted] = useState(false);
 
-    const startScan = () => {
-        setScanning(true);
-        setProgress(0);
-        setResult(null);
-    };
-
+    // Live feedback fluctuation simulation
     useEffect(() => {
-        if (scanning) {
-            const interval = setInterval(() => {
-                setProgress(p => {
-                    if (p >= 100) {
-                        clearInterval(interval);
-                        setScanning(false);
-                        const microplastics = Math.floor(Math.random() * 500 + 50);
-                        setResult({
-                            purity: (Math.random() * 15 + 80).toFixed(1),
-                            microplastics: microplastics,
-                            status: microplastics < 200 ? 'Safe' : 'Warning',
-                        });
-                        return 100;
-                    }
-                    return p + 5;
-                });
-            }, 60);
-        }
-    }, [scanning]);
+        if (!videoActive) return;
+        
+        const interval = setInterval(() => {
+            // Fluctuate stats
+            setPurityScore(prev => +(prev + (Math.random() * 0.4 - 0.2)).toFixed(1));
+            setFlowRate(prev => +(prev + (Math.random() * 0.2 - 0.1)).toFixed(1));
+            setPps(prev => Math.max(2, Math.min(45, prev + Math.floor(Math.random() * 5 - 2))));
+
+            // Append new logs
+            const polymers = ['PET', 'PP', 'PE', 'PVC', 'PS'];
+            const types = ['Fragment', 'Fiber', 'Microbead', 'Pellet'];
+            const randomPolymer = polymers[Math.floor(Math.random() * polymers.length)];
+            const randomType = types[Math.floor(Math.random() * types.length)];
+            const confidence = `${Math.floor(Math.random() * 15 + 82)}%`;
+            const size = `${Math.floor(Math.random() * 220 + 15)}μm`;
+            
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+            setDetectedLogs(prev => [
+                { time: timeStr, polymer: randomPolymer, size, confidence, type: randomType },
+                ...prev.slice(0, 5) // Keep last 6 logs
+            ]);
+        }, 1800);
+
+        return () => clearInterval(interval);
+    }, [videoActive]);
 
     const handleComplaintSubmit = (e) => {
         e.preventDefault();
@@ -83,87 +92,144 @@ export default function CitizenDashboard() {
             </div>
 
             <div className="grid lg:grid-cols-2 gap-8">
-                {/* Scanner Section */}
+                {/* AI Video Analyser Section */}
                 <div className="space-y-6">
-                    <div className="glass-card p-6 overflow-hidden relative min-h-[450px] flex flex-col justify-center">
-                        <div className="absolute top-4 right-4 z-20">
-                            <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-[10px] font-black tracking-widest uppercase">Scanner v2.4</span>
+                    <div className="glass-card p-6 overflow-hidden relative flex flex-col">
+                        <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
+                            <div className="flex items-center gap-2">
+                                <Video className="w-5 h-5 text-emerald-400" />
+                                <span className="text-sm font-bold text-white uppercase tracking-wider">AI Video Analyser</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <select
+                                    value={selectedFeed}
+                                    onChange={(e) => setSelectedFeed(e.target.value)}
+                                    className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-gray-300 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
+                                >
+                                    <option value="Kitchen Tap" className="bg-dark-900">Kitchen Tap</option>
+                                    <option value="Local Well" className="bg-dark-900">Local Well</option>
+                                    <option value="Municipal Stream" className="bg-dark-900">Municipal Stream</option>
+                                </select>
+                                <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest ${videoActive ? 'bg-red-500/20 text-red-400 animate-pulse border border-red-500/30' : 'bg-white/5 text-gray-500 border border-white/10'}`}>
+                                    {videoActive ? 'LIVE' : 'IDLE'}
+                                </span>
+                            </div>
                         </div>
 
-                        {!scanning && !result ? (
-                            <div className="text-center space-y-6">
-                                <div className="w-24 h-24 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto border-4 border-emerald-500/20 animate-pulse">
-                                    <Camera className="w-10 h-10 text-emerald-400" />
+                        {/* Viewport Screen */}
+                        <div className="relative w-full h-64 bg-dark-950 border border-white/10 rounded-2xl overflow-hidden flex items-center justify-center shadow-[inset_0_4px_24px_rgba(0,0,0,0.8)]">
+                            {/* Animated Flow background when active */}
+                            {videoActive ? (
+                                <div className="absolute inset-0 opacity-20 bg-gradient-to-b from-blue-900/40 via-cyan-900/20 to-transparent pointer-events-none">
+                                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:100%_8px] animate-[flow-water_4s_linear_infinite]" />
                                 </div>
-                                <div>
-                                    <h3 className="text-2xl font-black text-white uppercase tracking-wider">Tap Scan</h3>
-                                    <p className="text-gray-400 mt-2">Scan your drinking water to detect microplastic levels instantly.</p>
-                                </div>
-                                <button onClick={startScan} className="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.3)] mx-auto flex items-center gap-3">
-                                    <RefreshCw className="w-5 h-5" /> Start AI Analysis
-                                </button>
-                            </div>
-                        ) : scanning ? (
-                            <div className="text-center space-y-8">
-                                <div className="relative w-48 h-48 mx-auto flex items-center justify-center">
-                                    <div className="absolute inset-0 border-4 border-emerald-500/20 rounded-full animate-ping" />
-                                    <div className="absolute inset-0 border-4 border-emerald-500/40 rounded-full rotate-45 animate-spin-slow" />
-                                    <div className="text-4xl font-black text-emerald-400">{progress}%</div>
-                                </div>
-                                <div className="space-y-2">
-                                    <p className="text-white font-bold uppercase tracking-widest text-sm">Identifying Polymers...</p>
-                                    <div className="w-48 h-1 bg-white/5 mx-auto rounded-full overflow-hidden">
-                                        <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+                            ) : (
+                                <div className="absolute inset-0 bg-dark-950 flex flex-col items-center justify-center text-center p-6 z-10 pointer-events-none">
+                                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/10 mb-3">
+                                        <Video className="w-7 h-7 text-gray-500" />
                                     </div>
+                                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">Feed Connection Idle</h4>
+                                    <p className="text-xs text-gray-500 mt-1 max-w-xs">Start the real-time AI computer vision analyser to scan flowing water particles.</p>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="animate-scale-in space-y-6">
-                                <div className={`p-8 rounded-3xl text-center border-2 ${result.status === 'Safe' ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-red-500/5 border-red-500/30'}`}>
-                                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${result.status === 'Safe' ? 'bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)]' : 'bg-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.5)]'}`}>
-                                        {result.status === 'Safe' ? <ShieldCheck className="w-8 h-8" /> : <AlertTriangle className="w-8 h-8" />}
-                                    </div>
-                                    <h4 className={`text-3xl font-black uppercase tracking-widest ${result.status === 'Safe' ? 'text-emerald-400' : 'text-red-400'}`}>
-                                        {result.status === 'Safe' ? 'Water is Safe' : 'High Contamination'}
-                                    </h4>
-                                    <div className="flex justify-center gap-8 mt-6">
-                                        <div className="text-center">
-                                            <div className="text-2xl font-black text-white">{result.purity}%</div>
-                                            <div className="text-[10px] text-gray-400 uppercase font-bold">Purity Grade</div>
-                                        </div>
-                                        <div className="w-px h-10 bg-white/10" />
-                                        <div className="text-center">
-                                            <div className="text-2xl font-black text-white">{result.microplastics}</div>
-                                            <div className="text-[10px] text-gray-400 uppercase font-bold">Particles/L</div>
-                                        </div>
-                                    </div>
-                                </div>
+                            )}
 
-                                {/* Doctor Reports / Tips */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2 text-white font-bold text-sm uppercase tracking-widest">
-                                        <Heart className="w-4 h-4 text-red-400" /> Doctor's Health Precautions
+                            {/* Simulated Bounding Boxes */}
+                            {videoActive && (
+                                <>
+                                    <div className="absolute top-1/4 left-1/3 w-16 h-16 border border-red-500 rounded-lg animate-pulse flex flex-col justify-between p-1 bg-red-500/5">
+                                        <span className="text-[7px] text-red-400 font-bold bg-dark-950/80 px-1 rounded uppercase tracking-wide w-fit">PET Fragment</span>
+                                        <span className="text-[6px] text-red-400 text-right">93%</span>
                                     </div>
-                                    <div className="grid grid-cols-1 gap-3">
-                                        {healthyTips.map((tip, i) => (
-                                            <div key={i} className="flex gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
-                                                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 flex-shrink-0">
-                                                    <tip.icon className="w-5 h-5" />
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm font-bold text-white">{tip.title}</div>
-                                                    <div className="text-xs text-gray-400 mt-1 leading-relaxed">{tip.desc}</div>
-                                                </div>
+                                    <div className="absolute bottom-1/3 right-1/4 w-12 h-12 border border-yellow-500 rounded-lg animate-pulse flex flex-col justify-between p-1 bg-yellow-500/5" style={{ animationDelay: '0.8s' }}>
+                                        <span className="text-[7px] text-yellow-400 font-bold bg-dark-950/80 px-1 rounded uppercase tracking-wide w-fit">PP Fiber</span>
+                                        <span className="text-[6px] text-yellow-400 text-right">87%</span>
+                                    </div>
+                                    <div className="absolute top-1/3 right-1/3 w-8 h-8 border border-purple-500 rounded-lg animate-pulse flex flex-col justify-between p-1 bg-purple-500/5" style={{ animationDelay: '1.5s' }}>
+                                        <span className="text-[7px] text-purple-400 font-bold bg-dark-950/80 px-1 rounded uppercase tracking-wide w-fit">PE Bead</span>
+                                        <span className="text-[6px] text-purple-400 text-right">91%</span>
+                                    </div>
+                                    {/* Laser scan line */}
+                                    <div className="absolute left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_rgba(6,182,212,0.8)] animate-[scan-beam_3s_linear_infinite]" />
+                                    {/* Rec light overlay */}
+                                    <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-dark-950/80 px-2 py-0.5 rounded border border-white/5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+                                        <span className="text-[8px] font-bold text-white tracking-widest">REC AI</span>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Controls Panel */}
+                        <div className="flex gap-4 mt-5">
+                            <button
+                                onClick={() => setVideoActive(!videoActive)}
+                                className={`flex-1 py-4.5 rounded-2xl font-black uppercase tracking-widest text-xs transition-all hover:scale-102 active:scale-98 flex items-center justify-center gap-3 cursor-pointer shadow-lg ${
+                                    videoActive
+                                        ? 'bg-red-600/10 border border-red-500/20 text-red-400 hover:bg-red-600/20 shadow-red-500/5'
+                                        : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/15'
+                                }`}
+                            >
+                                {videoActive ? (
+                                    <>
+                                        <Pause className="w-4.5 h-4.5 fill-current" /> Pause AI Stream
+                                    </>
+                                ) : (
+                                    <>
+                                        <Play className="w-4.5 h-4.5 fill-current" /> Start AI Analyser
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Statistics Grid */}
+                        <div className="grid grid-cols-3 gap-3 mt-4">
+                            <div className="p-3 bg-white/5 border border-white/10 rounded-xl text-center">
+                                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">Purity Index</span>
+                                <span className={`text-xl font-black ${purityScore < 90 ? 'text-red-400' : purityScore < 97 ? 'text-yellow-400' : 'text-emerald-400'}`}>
+                                    {videoActive ? `${purityScore}%` : '--'}
+                                </span>
+                            </div>
+                            <div className="p-3 bg-white/5 border border-white/10 rounded-xl text-center">
+                                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">Particles/L</span>
+                                <span className="text-xl font-black text-white">
+                                    {videoActive ? pps : '--'}
+                                </span>
+                            </div>
+                            <div className="p-3 bg-white/5 border border-white/10 rounded-xl text-center">
+                                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">Flow Rate</span>
+                                <span className="text-xl font-black text-cyan-400">
+                                    {videoActive ? `${flowRate} L/s` : '--'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Real-time Detections Logs */}
+                        <div className="mt-5 space-y-2.5">
+                            <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                <Activity className="w-3.5 h-3.5" /> Real-time Detection Feed
+                            </div>
+                            <div className="h-40 overflow-y-auto custom-scrollbar border border-white/5 rounded-xl p-2 bg-dark-950/40 space-y-1.5">
+                                {videoActive ? (
+                                    detectedLogs.map((log, i) => (
+                                        <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/5 animate-fade-in text-xs">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[9px] text-gray-600 font-mono font-bold">{log.time}</span>
+                                                <span className="font-bold text-white">{log.polymer} {log.type}</span>
+                                                <span className="text-[10px] text-gray-400">({log.size})</span>
                                             </div>
-                                        ))}
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[9px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded font-semibold uppercase">{log.confidence}</span>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping" />
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="h-full flex items-center justify-center text-center text-xs text-gray-600">
+                                        Logs will populate here as particles are tracked in the video stream.
                                     </div>
-                                </div>
-
-                                <button onClick={startScan} className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-300 font-bold uppercase tracking-widest hover:bg-white/10 transition-all">
-                                    Scan Again
-                                </button>
+                                )}
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
 
@@ -343,6 +409,19 @@ export default function CitizenDashboard() {
 
                 </div>
             </div>
+            {/* Styles for simulated scan */}
+            <style>{`
+                @keyframes flow-water {
+                    0% { background-position: 0 0; }
+                    100% { background-position: 0 100%; }
+                }
+                @keyframes scan-beam {
+                    0% { top: 0; opacity: 0; }
+                    10% { opacity: 1; }
+                    90% { opacity: 1; }
+                    100% { top: 100%; opacity: 0; }
+                }
+            `}</style>
         </div>
     );
 }
