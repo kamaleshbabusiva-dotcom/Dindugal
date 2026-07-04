@@ -219,7 +219,7 @@ export default function CitizenDashboard() {
                         </div>
 
                         {/* Viewport Screen */}
-                        <div className="relative w-full h-64 bg-dark-950 border border-white/10 rounded-2xl overflow-hidden flex items-center justify-center shadow-[inset_0_4px_24px_rgba(0,0,0,0.8)]">
+                        <div className="relative w-full bg-dark-950 border border-white/10 rounded-2xl overflow-hidden shadow-[inset_0_4px_24px_rgba(0,0,0,0.8)] aspect-video">
                             <video ref={videoRef} className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${videoActive ? 'opacity-100' : 'opacity-0'}`} playsInline muted autoPlay />
                             <canvas ref={canvasRef} className="hidden" />
                             
@@ -242,12 +242,14 @@ export default function CitizenDashboard() {
 
                             {/* Live AI Bounding Boxes */}
                             {videoActive && result && result.detections.map((det, i) => {
+                                // Since the container is aspect-video (16:9) and object-cover, if the webcam is not exactly 16:9, the box might be slightly off.
+                                // However, most webcams default to 16:9 or 4:3. By enforcing aspect-video we prevent the extreme cropping of h-64.
                                 const x = (det.bbox.x / result.imageWidth) * 100;
                                 const y = (det.bbox.y / result.imageHeight) * 100;
                                 const w = (det.bbox.width / result.imageWidth) * 100;
                                 const h = (det.bbox.height / result.imageHeight) * 100;
                                 return (
-                                    <div key={i} className="absolute border border-cyan-500 rounded-lg animate-pulse flex flex-col justify-between p-1 bg-cyan-500/10 pointer-events-none" style={{ left: `${x}%`, top: `${y}%`, width: `${w}%`, height: `${h}%` }}>
+                                    <div key={i} className="absolute border-2 border-red-500 rounded-lg shadow-[0_0_15px_rgba(239,68,68,0.5)] flex flex-col justify-between p-1 bg-red-500/10 pointer-events-none transition-all duration-300" style={{ left: `${x}%`, top: `${y}%`, width: `${w}%`, height: `${h}%`, zIndex: 50 }}>
                                         <span className="text-[7px] text-cyan-400 font-bold bg-dark-950/80 px-1 rounded uppercase tracking-wide w-fit">{det.polymer.id}</span>
                                         <span className="text-[6px] text-cyan-400 text-right">{(det.confidence * 100).toFixed(0)}%</span>
                                     </div>
