@@ -57,9 +57,10 @@ export default function CitizenDashboard() {
         try {
             const rawDetectionResult = await runRoboflowInference(base64);
             
-            // Filter to ONLY detect Plastic Bottles (PET / bottles)
+            // Filter to ONLY detect the physical macro water bottle on screen
+            // Hide all other microscopic particle detections
             const filteredDetections = rawDetectionResult.detections.filter(
-                det => det.polymer.id === 'PET' || det.polymer.origin?.toLowerCase().includes('bottle')
+                det => det.id === 'macro_bottle_1'
             );
             
             const totalMass = filteredDetections.reduce((s, d) => s + d.size_um * 0.001, 0);
