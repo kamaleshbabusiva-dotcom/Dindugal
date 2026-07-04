@@ -66,19 +66,31 @@ export default function CitizenDashboard() {
         try {
             let filteredDetections = [];
             
-            // 1. First run local TensorFlow to precisely detect macro water bottles in the video
+            // 1. First run local TensorFlow to precisely detect macro objects in the video
             if (tfModel) {
-                const predictions = await tfModel.detect(video);
-                const bottles = predictions.filter(p => p.class === 'bottle');
-                
-                filteredDetections = bottles.map((b, i) => ({
-                    id: `tf_bottle_${i}`,
-                    class: 'bottle',
-                    confidence: b.score,
-                    bbox: { x: b.bbox[0], y: b.bbox[1], width: b.bbox[2], height: b.bbox[3] },
-                    polymer: { id: 'PET', risk: 'Medium', color: '#ef4444' },
-                    size_um: 150000 // Macro scale
-                }));
+                try {
+                    const predictions = await tfModel.detect(video);
+                    
+                    // Filter out 'person' so it doesn't track the user's face
+                    const objects = predictions.filter(p => p.class !== 'person');
+                    
+                    if (objects.length > 0) {
+                        // Sort by largest bounding box area
+                        objects.sort((a, b) => (b.bbox[2] * b.bbox[3]) - (a.bbox[2] * a.bbox[3]));
+                        const largest = objects[0];
+                        
+                        filteredDetections = [{
+                            id: `tf_obj_${largest.class}`,
+                            class: largest.class,
+                            confidence: largest.score,
+                            bbox: { x: largest.bbox[0], y: largest.bbox[1], width: largest.bbox[2], height: largest.bbox[3] },
+                            polymer: { id: 'PET', risk: 'Medium', color: '#ef4444' }, // Label as PET for the UI
+                            size_um: 150000 // Macro scale
+                        }];
+                    }
+                } catch (tfErr) {
+                    console.error("Local TF detection failed:", tfErr);
+                }
             }
 
             // 2. Fetch microplastics data from Roboflow in background
