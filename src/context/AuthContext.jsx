@@ -1,29 +1,14 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from '../firebase/config'
+import { supabase, isSupabaseConfigured } from '../supabase/client'
 import {
     signInWithGoogle,
     signInWithEmail,
     registerWithEmail,
     sendPhoneOTP,
     verifyPhoneOTP,
+    signOut as supabaseSignOut,
     setupRecaptcha,
-    firebaseSignOut,
-    extractUserInfo
-} from '../firebase/auth'
-import { supabase, isSupabaseConfigured } from '../supabase/client'
-
-const AuthContext = createContext({})
-
-export const useAuth = () => useContext(AuthContext)
-
-// ── Admin email whitelist ───────────────────────────────────────
-const ADMIN_EMAIL = 'kamaleshbabusiva@gmail.com'
-
-function getRole(email) {
-    if (!email) return 'citizen'
-    return email.toLowerCase().trim() === ADMIN_EMAIL ? 'admin' : 'citizen'
-}
+} from '../supabase/auth'
 
 // Demo users (preserved as fallback)
 const adminUser = {
@@ -33,10 +18,9 @@ const adminUser = {
     user_metadata: {
         full_name: 'Inspector Arjun Mehta',
         avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Arjun',
-        name: 'Inspector Arjun'
-    }
+        name: 'Inspector Arjun',
+    },
 }
-
 const citizenUser = {
     id: 'citizen-001',
     email: 'citizen@local.net',
@@ -44,16 +28,28 @@ const citizenUser = {
     user_metadata: {
         full_name: 'Local Resident',
         avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Citizen',
-        name: 'Local Resident'
-    }
+        name: 'Local Resident',
+    },
 }
 
-// ── Sync Firebase user to Supabase ──────────────────────────────
-async function syncUserToSupabase(firebaseUser, provider = 'email') {
-    if (!isSupabaseConfigured || !firebaseUser) return null
+// ── Admin email whitelist ───────────────────────────────────────
+const ADMIN_EMAIL = 'kamaleshbabusiva@gmail.com'
+function getRole(email) {
+    if (!email) return 'citizen'
+    return email.toLowerCase().trim() === ADMIN_EMAIL ? 'admin' : 'citizen'
+}
 
-    const userInfo = extractUserInfo(firebaseUser, provider)
-
+// Helper to sync Supabase user to profiles table (RPC) – same as before
+async function syncUserToSupabase(supabaseUser, provider = 'email') {
+    if (!isSupabaseConfigured || !supabaseUser) return null
+    const userInfo = {
+        firebaseUid: supabaseUser.id,
+        email: supabaseUser.email,
+        fullName: supabaseUser.user_metadata?.full_name || supabaseUser.email,
+        avatarUrl: supabaseUser.user_metadata?.avatar_url,
+        phone: supabaseUser.phone,
+        authProvider: provider,
+    }
     try {
         const { data, error } = await supabase.rpc('upsert_firebase_user', {
             p_firebase_uid: userInfo.firebaseUid,
@@ -61,12 +57,11 @@ async function syncUserToSupabase(firebaseUser, provider = 'email') {
             p_full_name: userInfo.fullName,
             p_avatar_url: userInfo.avatarUrl,
             p_phone: userInfo.phone,
-            p_auth_provider: userInfo.authProvider
+            p_auth_provider: userInfo.authProvider,
         })
-
         if (error) {
             console.warn('Supabase sync error (RPC):', error.message)
-            // Fallback: try direct insert/update
+            // Fallback direct upsert
             const { data: profile, error: directErr } = await supabase
                 .from('profiles')
                 .upsert({
@@ -77,11 +72,10 @@ async function syncUserToSupabase(firebaseUser, provider = 'email') {
                     avatar_url: userInfo.avatarUrl,
                     phone: userInfo.phone,
                     auth_provider: userInfo.authProvider,
-                    updated_at: new Date().toISOString()
+                    updated_at: new Date().toISOString(),
                 }, { onConflict: 'firebase_uid' })
                 .select()
                 .single()
-
             if (directErr) {
                 console.warn('Supabase direct sync also failed:', directErr.message)
                 return null
@@ -95,28 +89,25 @@ async function syncUserToSupabase(firebaseUser, provider = 'email') {
     }
 }
 
-// ── Fetch profile from Supabase ─────────────────────────────────
-async function fetchSupabaseProfile(firebaseUid) {
+// Fetch profile from Supabase
+async function fetchSupabaseProfile(supabaseUid) {
     if (!isSupabaseConfigured) return null
     try {
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
-            .eq('firebase_uid', firebaseUid)
+            .eq('firebase_uid', supabaseUid)
             .single()
         if (error) return null
         return data
-    } catch {
-        return null
-    }
+    } catch { return null }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// AuthProvider
-// ═══════════════════════════════════════════════════════════════
+const AuthContext = createContext({})
+export const useAuth = () => useContext(AuthContext)
+
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null)
-    const [firebaseUser, setFirebaseUser] = useState(null)
     const [session, setSession] = useState(null)
     const [loading, setLoading] = useState(true)
     const [profile, setProfile] = useState(null)
@@ -125,73 +116,52 @@ export const AuthProvider = ({ children }) => {
     const [authProvider, setAuthProvider] = useState(null)
     const [authError, setAuthError] = useState(null)
 
-    // ── Firebase auth state listener ────────────────────────────
+    // Supabase auth listener
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-            if (fbUser) {
-                setFirebaseUser(fbUser)
-
-                // Determine provider
-                const providerData = fbUser.providerData?.[0]
-                let provider = 'email'
-                if (providerData?.providerId === 'google.com') provider = 'google'
-                else if (providerData?.providerId === 'phone') provider = 'phone'
-                setAuthProvider(provider)
-
-                // Determine role based on email (only admin email gets admin)
-                const userEmail = fbUser.email || fbUser.phoneNumber || ''
-                const assignedRole = getRole(userEmail)
-
-                // Build user object compatible with existing app
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, sess) => {
+            if (sess?.user) {
+                const sbUser = sess.user
+                const role = getRole(sbUser.email || sbUser.phone || '')
                 const appUser = {
-                    id: fbUser.uid,
-                    email: userEmail,
-                    role: assignedRole,
+                    id: sbUser.id,
+                    email: sbUser.email || sbUser.phone || '',
+                    role,
                     user_metadata: {
-                        full_name: fbUser.displayName || userEmail || 'User',
-                        avatar_url: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${fbUser.uid}`,
-                        name: fbUser.displayName || 'User'
-                    }
+                        full_name: sbUser.user_metadata?.full_name || sbUser.email || 'User',
+                        avatar_url: sbUser.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${sbUser.id}`,
+                        name: sbUser.user_metadata?.full_name || 'User',
+                    },
                 }
-
                 setUser(appUser)
                 setSession({ user: appUser })
-
-                // Sync to Supabase and fetch full profile
-                const supabaseProfile = await syncUserToSupabase(fbUser, provider)
+                setUserRole(role)
+                setAuthProvider('email')
+                // Sync profile
+                const supabaseProfile = await syncUserToSupabase(sbUser, 'email')
                 if (supabaseProfile) {
-                    // Always use email-based role (ignore Supabase role)
-                    appUser.role = assignedRole
-                    setUserRole(assignedRole)
-                    // Citizens skip onboarding, admin respects Supabase flag
-                    setIsOnboarded(assignedRole === 'citizen' ? true : (supabaseProfile.is_onboarded || false))
                     setProfile({
                         name: supabaseProfile.full_name || appUser.user_metadata.full_name,
-                        profession: assignedRole === 'admin' ? 'Senior Water Inspector' : (supabaseProfile.specialty || 'Citizen Monitor'),
+                        profession: role === 'admin' ? 'Senior Water Inspector' : (supabaseProfile.specialty || 'Citizen Monitor'),
                         streak: supabaseProfile.streak_count || 0,
                         bonusPoints: supabaseProfile.bonus_points || 0,
                         avatar: supabaseProfile.avatar_url || appUser.user_metadata.avatar_url,
                         email: supabaseProfile.email || appUser.email,
-                        supabaseId: supabaseProfile.id
+                        supabaseId: supabaseProfile.id,
                     })
-                    setUser({ ...appUser, role: assignedRole })
+                    setIsOnboarded(role === 'citizen' ? true : (supabaseProfile.is_onboarded || false))
                 } else {
-                    // No Supabase data — set defaults using email-based role
-                    setUserRole(assignedRole)
-                    // Citizens skip onboarding entirely
-                    setIsOnboarded(assignedRole === 'citizen' ? true : false)
                     setProfile({
                         name: appUser.user_metadata.full_name,
-                        profession: assignedRole === 'admin' ? 'Senior Water Inspector' : 'Citizen Monitor',
+                        profession: role === 'admin' ? 'Senior Water Inspector' : 'Citizen Monitor',
                         streak: 0,
                         bonusPoints: 0,
                         avatar: appUser.user_metadata.avatar_url,
-                        email: appUser.email
+                        email: appUser.email,
                     })
+                    setIsOnboarded(role === 'citizen')
                 }
             } else {
-                // User signed out
-                setFirebaseUser(null)
+                // Signed out
                 setUser(null)
                 setSession(null)
                 setProfile(null)
@@ -201,37 +171,40 @@ export const AuthProvider = ({ children }) => {
             }
             setLoading(false)
         })
-
-        return () => unsubscribe()
+        return () => subscription?.unsubscribe()
     }, [])
 
     // ── Auth methods ────────────────────────────────────────────
-
     const loginWithGoogle = async () => {
         try {
             setAuthError(null)
             setLoading(true)
             await signInWithGoogle()
-            // State is handled by onAuthStateChanged
         } catch (err) {
             setAuthError(err.message)
-            setLoading(false)
             throw err
+        } finally {
+            setLoading(false)
         }
     }
-
     const loginWithEmail = async (email, password) => {
+        // Allow only the designated user
+        if (email !== 'shrikeshav37@gmail.com') {
+            const errMsg = 'Login restricted: only shrikeshav37@gmail.com is allowed.';
+            setAuthError(errMsg);
+            throw new Error(errMsg);
+        }
         try {
-            setAuthError(null)
-            setLoading(true)
-            await signInWithEmail(email, password)
+            setAuthError(null);
+            setLoading(true);
+            await signInWithEmail(email, password);
         } catch (err) {
-            setAuthError(err.message)
-            setLoading(false)
+            setAuthError(err.message);
             throw err
+        } finally {
+            setLoading(false)
         }
     }
-
     const registerEmail = async (email, password, displayName) => {
         try {
             setAuthError(null)
@@ -239,53 +212,52 @@ export const AuthProvider = ({ children }) => {
             await registerWithEmail(email, password, displayName)
         } catch (err) {
             setAuthError(err.message)
-            setLoading(false)
             throw err
+        } finally {
+            setLoading(false)
         }
     }
-
     const loginWithPhone = async (phoneNumber, recaptchaElementId) => {
         try {
             setAuthError(null)
-            const verifier = setupRecaptcha(recaptchaElementId)
-            const confirmation = await sendPhoneOTP(phoneNumber, verifier)
-            return confirmation
+            setLoading(true)
+            // Supabase does not require recaptcha; just send OTP
+            await sendPhoneOTP(phoneNumber)
+            // Return the phoneNumber as a simple confirmation token for the UI
+            return phoneNumber
         } catch (err) {
             setAuthError(err.message)
             throw err
+        } finally {
+            setLoading(false)
         }
     }
-
-    const confirmOTP = async (confirmationResult, otp) => {
+    const confirmOTP = async (phoneNumber, otp) => {
         try {
             setAuthError(null)
             setLoading(true)
-            await verifyPhoneOTP(confirmationResult, otp)
+            await verifyPhoneOTP(phoneNumber, otp)
         } catch (err) {
             setAuthError(err.message)
-            setLoading(false)
             throw err
+        } finally {
+            setLoading(false)
         }
     }
-
     const logout = async () => {
         try {
-            await firebaseSignOut()
+            await supabaseSignOut()
         } catch (err) {
             console.error('Logout error:', err)
         }
-        // Also clear demo state
         setUser(null)
-        setFirebaseUser(null)
         setSession(null)
         setProfile(null)
         setUserRole(null)
         setIsOnboarded(false)
         setAuthProvider(null)
     }
-
-    // ── Demo logins (preserved) ─────────────────────────────────
-
+    // Demo logins (preserved)
     const adminDemoLogin = () => {
         setUserRole('admin')
         setUser(adminUser)
@@ -297,11 +269,11 @@ export const AuthProvider = ({ children }) => {
             profession: 'Senior Water Inspector',
             streak: 15,
             bonusPoints: 1250,
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Arjun'
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Arjun',
+            email: adminUser.email,
         })
         setLoading(false)
     }
-
     const citizenDemoLogin = () => {
         setUserRole('citizen')
         setUser(citizenUser)
@@ -313,19 +285,17 @@ export const AuthProvider = ({ children }) => {
             profession: 'Neighborhood Resident',
             streak: 4,
             bonusPoints: 320,
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Citizen'
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Citizen',
+            email: citizenUser.email,
         })
         setLoading(false)
     }
-
     const demoLogout = () => logout()
 
     const completeOnboarding = async (profileData) => {
         setProfile(profileData)
         setIsOnboarded(true)
-
-        // Sync onboarding data to Supabase
-        if (isSupabaseConfigured && firebaseUser) {
+        if (isSupabaseConfigured && user) {
             try {
                 await supabase
                     .from('profiles')
@@ -334,20 +304,17 @@ export const AuthProvider = ({ children }) => {
                         full_name: profileData.name,
                         display_name: profileData.name,
                         specialty: profileData.profession || profileData.stepGoal?.professionLabel,
-                        updated_at: new Date().toISOString()
+                        updated_at: new Date().toISOString(),
                     })
-                    .eq('firebase_uid', firebaseUser.uid)
+                    .eq('firebase_uid', user.id)
             } catch (err) {
                 console.warn('Failed to sync onboarding:', err)
             }
         }
     }
 
-    // ── Context value ───────────────────────────────────────────
-
     const value = {
         user,
-        firebaseUser,
         session,
         loading,
         profile,
@@ -355,25 +322,18 @@ export const AuthProvider = ({ children }) => {
         userRole,
         authProvider,
         authError,
-        // Firebase auth methods
         loginWithGoogle,
         loginWithEmail,
         registerEmail,
         loginWithPhone,
         confirmOTP,
         logout,
-        // Demo methods (preserved)
         adminDemoLogin,
         citizenDemoLogin,
         demoLogout,
-        // Onboarding
         completeOnboarding,
-        setProfile
+        setProfile,
     }
 
-    return (
-        <AuthContext.Provider value={value}>
-            {children}
-        </AuthContext.Provider>
-    )
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

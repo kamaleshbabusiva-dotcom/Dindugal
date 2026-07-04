@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom'
 export default function LoginPage() {
     const {
         loginWithGoogle, loginWithEmail, loginWithPhone, confirmOTP,
-        authError
+        authError, adminDemoLogin, citizenDemoLogin
     } = useAuth()
     const { t, currentLanguage, setCurrentLanguage, languages } = useLanguage()
 
@@ -93,7 +93,9 @@ export default function LoginPage() {
         setIsLoading(false)
     }
 
-    function getFirebaseErrorMessage(code) {
+    const getFirebaseErrorMessage = (err) => {
+        // Supabase errors are plain messages; map known codes to friendly text
+        const code = err?.message || err?.code;
         const messages = {
             'auth/user-not-found': 'No account found with this email. Please register first.',
             'auth/wrong-password': 'Incorrect password. Please try again.',
@@ -104,9 +106,9 @@ export default function LoginPage() {
             'auth/invalid-verification-code': 'Invalid OTP code. Please check and try again.',
             'auth/code-expired': 'OTP has expired. Please request a new one.',
             'auth/invalid-credential': 'Invalid credentials. Please check and try again.',
-        }
-        return messages[code] || code || 'An error occurred. Please try again.'
-    }
+        };
+        return messages[code] || err?.message || 'An error occurred. Please try again.';
+    };
 
     const tabs = [
         { id: 'email', label: 'Email', icon: Mail },
@@ -219,6 +221,29 @@ export default function LoginPage() {
                                             </p>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* ═══ Demo Login Buttons ═══ */}
+                            <div className="max-w-md mb-6 space-y-3">
+                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Quick Demo Access</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        id="demo-admin-login-btn"
+                                        onClick={adminDemoLogin}
+                                        className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all font-semibold text-sm cursor-pointer shadow-lg shadow-blue-500/5"
+                                    >
+                                        <ShieldAlert className="w-4 h-4" />
+                                        Demo Admin
+                                    </button>
+                                    <button
+                                        id="demo-citizen-login-btn"
+                                        onClick={citizenDemoLogin}
+                                        className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all font-semibold text-sm cursor-pointer shadow-lg shadow-emerald-500/5"
+                                    >
+                                        <Users className="w-4 h-4" />
+                                        Demo Citizen
+                                    </button>
                                 </div>
                             </div>
 
