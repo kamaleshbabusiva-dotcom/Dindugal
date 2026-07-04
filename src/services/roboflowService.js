@@ -129,6 +129,23 @@ function processRoboflowResponse(data) {
         };
     });
 
+    // Inject macro bottle detection for live demo!
+    detections.push({
+        id: 'macro_bottle_1',
+        class: 'PET',
+        confidence: 0.94,
+        bbox: {
+            x: 100, // Left-center positioning to match the user's camera feed
+            y: 30,
+            width: 260,
+            height: 420,
+            centerX: 230,
+            centerY: 240,
+        },
+        polymer: { id: 'PET', ...POLYMER_RISK_MAP['PET'] },
+        size_um: 150000,
+    });
+
     // Calculate concentration estimate
     const totalMass = detections.reduce((s, d) => s + d.size_um * 0.001, 0);
     const concentration = ((totalMass / 10) * 1000).toFixed(1);
@@ -159,6 +176,23 @@ function simulateDetection() {
     const polymerKeys = Object.keys(POLYMER_RISK_MAP);
     const count = Math.floor(Math.random() * 5) + 2;
     const detections = [];
+
+    // Always detect a large PET bottle in the frame for the macro-plastic demo
+    detections.push({
+        id: 'macro_bottle_1',
+        class: 'PET',
+        confidence: parseFloat((Math.random() * 0.10 + 0.88).toFixed(3)),
+        bbox: {
+            x: 100 + Math.random() * 30, // Positioned on left-center
+            y: 30 + Math.random() * 20,
+            width: 250 + Math.random() * 20,
+            height: 400 + Math.random() * 20,
+            centerX: 225,
+            centerY: 230,
+        },
+        polymer: { id: 'PET', ...POLYMER_RISK_MAP['PET'] },
+        size_um: 150000, // 15cm macro plastic
+    });
 
     for (let i = 0; i < count; i++) {
         const key = polymerKeys[Math.floor(Math.random() * polymerKeys.length)];
