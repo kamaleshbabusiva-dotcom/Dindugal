@@ -124,6 +124,7 @@ function processRoboflowResponse(data) {
             polymer: {
                 id: className,
                 ...polymerInfo,
+            }
         };
     });
 
