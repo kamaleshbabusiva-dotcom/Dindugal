@@ -24,6 +24,8 @@ export default function CitizenDashboard() {
     const [complaint, setComplaint] = useState({ type: 'General', details: '', healthAffected: false });
     const [submitted, setSubmitted] = useState(false);
     
+    const [liveBboxes, setLiveBboxes] = useState([]);
+
     // Load local ML model for macro-bottle tracking
     const [tfModel, setTfModel] = useState(null);
     useEffect(() => {
@@ -49,11 +51,50 @@ export default function CitizenDashboard() {
         }
     };
 
+    // FAST LOOP: Real-time bounding box tracking (150ms)
+    const runFastTracking = async () => {
+        if (!videoRef.current || !canvasRef.current || !tfModel) return;
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (video.videoWidth === 0) return;
+        
+        // Ensure canvas matches video exactly
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+
+        try {
+            // Run detection directly on the canvas image data
+            const predictions = await tfModel.detect(canvas);
+            const objects = predictions.filter(p => p.class !== 'person');
+            
+            if (objects.length > 0) {
+                objects.sort((a, b) => (b.bbox[2] * b.bbox[3]) - (a.bbox[2] * a.bbox[3]));
+                const largest = objects[0];
+                
+                setLiveBboxes([{
+                    id: `tf_obj_${largest.class}`,
+                    class: largest.class,
+                    confidence: largest.score,
+                    bbox: { x: largest.bbox[0], y: largest.bbox[1], width: largest.bbox[2], height: largest.bbox[3] },
+                    polymer: { id: 'PET', risk: 'Medium', color: '#ef4444' },
+                    size_um: 150000
+                }]);
+            } else {
+                setLiveBboxes([]);
+            }
+        } catch (err) {
+            console.error("TF tracking error:", err);
+        }
+    };
+
+    // SLOW LOOP: Backend Analytics & Logs (3000ms)
     const captureAndAnalyze = async () => {
         if (!videoRef.current || !canvasRef.current) return;
         const video = videoRef.current;
         const canvas = canvasRef.current;
-        if (video.videoWidth === 0) return; // not ready
+        if (video.videoWidth === 0) return;
         
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -64,51 +105,18 @@ export default function CitizenDashboard() {
         
         setAnalyzing(true);
         try {
-            let filteredDetections = [];
-            
-            // 1. First run local TensorFlow to precisely detect macro objects in the video
-            if (tfModel) {
-                try {
-                    const predictions = await tfModel.detect(video);
-                    
-                    // Filter out 'person' so it doesn't track the user's face
-                    const objects = predictions.filter(p => p.class !== 'person');
-                    
-                    if (objects.length > 0) {
-                        // Sort by largest bounding box area
-                        objects.sort((a, b) => (b.bbox[2] * b.bbox[3]) - (a.bbox[2] * a.bbox[3]));
-                        const largest = objects[0];
-                        
-                        filteredDetections = [{
-                            id: `tf_obj_${largest.class}`,
-                            class: largest.class,
-                            confidence: largest.score,
-                            bbox: { x: largest.bbox[0], y: largest.bbox[1], width: largest.bbox[2], height: largest.bbox[3] },
-                            polymer: { id: 'PET', risk: 'Medium', color: '#ef4444' }, // Label as PET for the UI
-                            size_um: 150000 // Macro scale
-                        }];
-                    }
-                } catch (tfErr) {
-                    console.error("Local TF detection failed:", tfErr);
-                }
-            }
-
-            // 2. Fetch microplastics data from Roboflow in background
             const rawDetectionResult = await runRoboflowInference(base64);
             
-            // If local TF didn't find a bottle, fallback to Roboflow's PET
-            if (filteredDetections.length === 0) {
-                filteredDetections = rawDetectionResult.detections.filter(
-                    det => det.polymer.id === 'PET' || det.class?.toLowerCase().includes('bottle')
-                );
-            }
+            const filteredDetections = rawDetectionResult.detections.filter(
+                det => det.polymer.id === 'PET' || det.class?.toLowerCase().includes('bottle')
+            );
             
             const totalMass = filteredDetections.reduce((s, d) => s + d.size_um * 0.001, 0);
             const filteredConcentration = ((totalMass / 10) * 1000).toFixed(1);
 
             const detectionResult = {
                 ...rawDetectionResult,
-                imageWidth: video.videoWidth,   // Use actual video width for local TF coordinates
+                imageWidth: video.videoWidth,
                 imageHeight: video.videoHeight,
                 detections: filteredDetections,
                 totalParticles: filteredDetections.length,
@@ -122,7 +130,6 @@ export default function CitizenDashboard() {
             setPps(detectionResult.totalParticles);
             setFlowRate(prev => +(prev + (Math.random() * 0.2 - 0.1)).toFixed(1));
             
-            // Add to logs
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
             
@@ -144,21 +151,33 @@ export default function CitizenDashboard() {
     };
 
     useEffect(() => {
+        let slowInterval;
+        let fastInterval;
         if (videoActive) {
             startCamera();
-            const interval = setInterval(() => {
+            
+            // Start the fast real-time tracking loop
+            fastInterval = setInterval(() => {
+                runFastTracking();
+            }, 150);
+
+            // Start the slow analytics loop
+            slowInterval = setInterval(() => {
                 captureAndAnalyze();
             }, 3000);
+            
             return () => {
-                clearInterval(interval);
+                clearInterval(slowInterval);
+                clearInterval(fastInterval);
                 stopCamera();
             };
         } else {
             stopCamera();
             setResult(null);
+            setLiveBboxes([]);
             setAnalyzing(false);
         }
-    }, [videoActive]);
+    }, [videoActive, tfModel]);
 
     const handleComplaintSubmit = (e) => {
         e.preventDefault();
@@ -253,15 +272,13 @@ export default function CitizenDashboard() {
                             )}
 
                             {/* Live AI Bounding Boxes */}
-                            {videoActive && result && result.detections.map((det, i) => {
-                                // Since the container is aspect-video (16:9) and object-cover, if the webcam is not exactly 16:9, the box might be slightly off.
-                                // However, most webcams default to 16:9 or 4:3. By enforcing aspect-video we prevent the extreme cropping of h-64.
-                                const x = (det.bbox.x / result.imageWidth) * 100;
-                                const y = (det.bbox.y / result.imageHeight) * 100;
-                                const w = (det.bbox.width / result.imageWidth) * 100;
-                                const h = (det.bbox.height / result.imageHeight) * 100;
+                            {videoActive && liveBboxes.map((det, i) => {
+                                const x = (det.bbox.x / (videoRef.current?.videoWidth || 1)) * 100;
+                                const y = (det.bbox.y / (videoRef.current?.videoHeight || 1)) * 100;
+                                const w = (det.bbox.width / (videoRef.current?.videoWidth || 1)) * 100;
+                                const h = (det.bbox.height / (videoRef.current?.videoHeight || 1)) * 100;
                                 return (
-                                    <div key={i} className="absolute border-2 border-red-500 rounded-lg shadow-[0_0_15px_rgba(239,68,68,0.5)] flex flex-col justify-between p-1 bg-red-500/10 pointer-events-none transition-all duration-300" style={{ left: `${x}%`, top: `${y}%`, width: `${w}%`, height: `${h}%`, zIndex: 50 }}>
+                                    <div key={i} className="absolute border-2 border-red-500 rounded-lg shadow-[0_0_15px_rgba(239,68,68,0.5)] flex flex-col justify-between p-1 bg-red-500/10 pointer-events-none transition-all duration-[150ms] ease-linear" style={{ left: `${x}%`, top: `${y}%`, width: `${w}%`, height: `${h}%`, zIndex: 50 }}>
                                         <span className="text-[7px] text-cyan-400 font-bold bg-dark-950/80 px-1 rounded uppercase tracking-wide w-fit">{det.polymer.id}</span>
                                         <span className="text-[6px] text-cyan-400 text-right">{(det.confidence * 100).toFixed(0)}%</span>
                                     </div>
