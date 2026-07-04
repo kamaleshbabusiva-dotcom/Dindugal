@@ -51,38 +51,25 @@ async function syncUserToSupabase(supabaseUser, provider = 'email') {
         authProvider: provider,
     }
     try {
-        const { data, error } = await supabase.rpc('upsert_firebase_user', {
-            p_firebase_uid: userInfo.firebaseUid,
-            p_email: userInfo.email,
-            p_full_name: userInfo.fullName,
-            p_avatar_url: userInfo.avatarUrl,
-            p_phone: userInfo.phone,
-            p_auth_provider: userInfo.authProvider,
-        })
-        if (error) {
-            console.warn('Supabase sync error (RPC):', error.message)
-            // Fallback direct upsert
-            const { data: profile, error: directErr } = await supabase
-                .from('profiles')
-                .upsert({
-                    firebase_uid: userInfo.firebaseUid,
-                    email: userInfo.email,
-                    full_name: userInfo.fullName,
-                    display_name: userInfo.fullName,
-                    avatar_url: userInfo.avatarUrl,
-                    phone: userInfo.phone,
-                    auth_provider: userInfo.authProvider,
-                    updated_at: new Date().toISOString(),
-                }, { onConflict: 'firebase_uid' })
-                .select()
-                .single()
-            if (directErr) {
-                console.warn('Supabase direct sync also failed:', directErr.message)
-                return null
-            }
-            return profile
+        const { data: profile, error: directErr } = await supabase
+            .from('profiles')
+            .upsert({
+                firebase_uid: userInfo.firebaseUid,
+                email: userInfo.email,
+                full_name: userInfo.fullName,
+                display_name: userInfo.fullName,
+                avatar_url: userInfo.avatarUrl,
+                phone: userInfo.phone,
+                auth_provider: userInfo.authProvider,
+                updated_at: new Date().toISOString(),
+            }, { onConflict: 'firebase_uid' })
+            .select()
+            .single()
+        if (directErr) {
+            console.warn('Supabase sync error:', directErr.message)
+            return null
         }
-        return typeof data === 'string' ? JSON.parse(data) : data
+        return profile
     } catch (err) {
         console.warn('Supabase sync failed:', err.message)
         return null
