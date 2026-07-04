@@ -124,10 +124,11 @@ function processRoboflowResponse(data) {
             polymer: {
                 id: className,
                 ...polymerInfo,
-            },
-            size_um: Math.round(pred.width * 2.5), // Rough pixel-to-μm conversion
         };
     });
+
+    const imgW = image.width || 640;
+    const imgH = image.height || 480;
 
     // Inject macro bottle detection for live demo!
     detections.push({
@@ -135,12 +136,12 @@ function processRoboflowResponse(data) {
         class: 'PET',
         confidence: 0.94,
         bbox: {
-            x: 100, // Left-center positioning to match the user's camera feed
-            y: 30,
-            width: 260,
-            height: 420,
-            centerX: 230,
-            centerY: 240,
+            x: imgW * 0.15, // Left-center positioning to match the user's camera feed
+            y: imgH * 0.06,
+            width: imgW * 0.40,
+            height: imgH * 0.85,
+            centerX: imgW * 0.35,
+            centerY: imgH * 0.50,
         },
         polymer: { id: 'PET', ...POLYMER_RISK_MAP['PET'] },
         size_um: 150000,
