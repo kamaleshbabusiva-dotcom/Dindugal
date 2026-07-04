@@ -226,90 +226,97 @@ export default function LoginPage() {
                             </div>
 
                             {/* ═══ Demo Login Buttons ═══ */}
-                            <div className="max-w-md mb-8 space-y-3">
-                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Quick Demo Access</h3>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        id="demo-admin-login-btn"
-                                        onClick={adminDemoLogin}
-                                        className="flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl bg-blue-600/10 border border-blue-500/30 text-blue-400 hover:bg-blue-600/20 hover:border-blue-400 hover:scale-[1.02] active:scale-[0.98] transition-all font-semibold text-sm cursor-pointer shadow-lg shadow-blue-500/5"
-                                    >
-                                        <ShieldAlert className="w-4 h-4 animate-pulse" />
-                                        Demo Admin
-                                    </button>
-                                    <button
-                                        id="demo-citizen-login-btn"
-                                        onClick={citizenDemoLogin}
-                                        className="flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-400 hover:scale-[1.02] active:scale-[0.98] transition-all font-semibold text-sm cursor-pointer shadow-lg shadow-emerald-500/5"
-                                    >
-                                        <Users className="w-4 h-4" />
-                                        Demo Citizen
-                                    </button>
-                                </div>
-                            </div>
+                             <div className="max-w-md mb-8 space-y-3">
+                                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Quick Demo Access</h3>
+                                 <div className="grid grid-cols-2 gap-3">
+                                     <button
+                                         id="demo-admin-login-btn"
+                                         onClick={adminDemoLogin}
+                                         className="relative group/btn overflow-hidden flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl bg-blue-600/10 border border-blue-500/30 text-blue-400 hover:bg-blue-600/20 hover:border-blue-400 hover:scale-[1.02] active:scale-[0.98] transition-all font-semibold text-sm cursor-pointer shadow-lg shadow-blue-500/5"
+                                     >
+                                         <ShieldAlert className="w-4 h-4 animate-pulse relative z-10" />
+                                         <span className="relative z-10">Demo Admin</span>
+                                         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 -translate-x-full group-hover/btn:translate-x-0 transition-transform duration-300" />
+                                     </button>
+                                     <button
+                                         id="demo-citizen-login-btn"
+                                         onClick={citizenDemoLogin}
+                                         className="relative group/btn overflow-hidden flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-400 hover:scale-[1.02] active:scale-[0.98] transition-all font-semibold text-sm cursor-pointer shadow-lg shadow-emerald-500/5"
+                                     >
+                                         <Users className="w-4 h-4 relative z-10" />
+                                         <span className="relative z-10">Demo Citizen</span>
+                                         <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 -translate-x-full group-hover/btn:translate-x-0 transition-transform duration-300" />
+                                     </button>
+                                 </div>
+                             </div>
 
-                            {/* ═══ Firebase Auth Card ═══ */}
-                            <div className="glass-card p-8 border-white/10 max-w-md shadow-2xl relative">
-                                <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-                                {/* Error Message */}
-                                {error && (
-                                    <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2 animate-fade-in">
-                                        <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-                                        <p className="text-sm text-red-300">{error}</p>
-                                    </div>
-                                )}
+                             {/* ═══ Firebase Auth Card with Neon Backdrop Glow ═══ */}
+                             <div className="relative max-w-md group">
+                                 {/* Glowing background */}
+                                 <div className="absolute -inset-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 rounded-2xl blur-xl opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
+                                 
+                                 <div className="relative glass-card p-8 border-white/10 shadow-2xl">
+                                     <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+                                     {/* Error Message */}
+                                     {error && (
+                                         <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2 animate-fade-in">
+                                             <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                                             <p className="text-sm text-red-300">{error}</p>
+                                         </div>
+                                     )}
 
-                                {/* Email/Password Form */}
-                                <form onSubmit={handleEmailLogin} className="space-y-5 animate-fade-in">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Email Address</label>
-                                        <div className="relative">
-                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                                            <input
-                                                id="login-email"
-                                                type="email"
-                                                value={email}
-                                                onChange={e => setEmail(e.target.value)}
-                                                placeholder="your@email.com"
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.08] focus:ring-2 focus:ring-blue-500/10 transition-all text-sm"
-                                                autoComplete="email"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Password</label>
-                                        <div className="relative">
-                                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                                            <input
-                                                id="login-password"
-                                                type={showPassword ? 'text' : 'password'}
-                                                value={password}
-                                                onChange={e => setPassword(e.target.value)}
-                                                placeholder="••••••••"
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-12 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.08] focus:ring-2 focus:ring-blue-500/10 transition-all text-sm"
-                                                autoComplete="current-password"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
-                                            >
-                                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <button
-                                        id="email-login-btn"
-                                        type="submit"
-                                        disabled={isLoading}
-                                        className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white font-bold transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
-                                        {isLoading ? 'Signing in...' : 'Sign In'}
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+                                     {/* Email/Password Form */}
+                                     <form onSubmit={handleEmailLogin} className="space-y-5 animate-fade-in">
+                                         <div>
+                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Email Address</label>
+                                             <div className="relative">
+                                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                                 <input
+                                                     id="login-email"
+                                                     type="email"
+                                                     value={email}
+                                                     onChange={e => setEmail(e.target.value)}
+                                                     placeholder="your@email.com"
+                                                     className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:bg-white/[0.08] focus:ring-4 focus:ring-blue-500/20 transition-all text-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)]"
+                                                     autoComplete="email"
+                                                 />
+                                             </div>
+                                         </div>
+                                         <div>
+                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Password</label>
+                                             <div className="relative">
+                                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                                 <input
+                                                     id="login-password"
+                                                     type={showPassword ? 'text' : 'password'}
+                                                     value={password}
+                                                     onChange={e => setPassword(e.target.value)}
+                                                     placeholder="••••••••"
+                                                     className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-12 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:bg-white/[0.08] focus:ring-4 focus:ring-blue-500/20 transition-all text-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)]"
+                                                     autoComplete="current-password"
+                                                 />
+                                                 <button
+                                                     type="button"
+                                                     onClick={() => setShowPassword(!showPassword)}
+                                                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                                                 >
+                                                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                 </button>
+                                             </div>
+                                         </div>
+                                         <button
+                                             id="email-login-btn"
+                                             type="submit"
+                                             disabled={isLoading}
+                                             className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white font-bold transition-all hover:shadow-[0_0_25px_rgba(99,102,241,0.45)] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                                         >
+                                             {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
+                                             {isLoading ? 'Signing in...' : 'Sign In'}
+                                         </button>
+                                     </form>
+                                 </div>
+                             </div>
+                         </div>
 
                         {/* Right - Feature Cards */}
                         <div className="grid grid-cols-2 gap-4 animate-slide-up">
