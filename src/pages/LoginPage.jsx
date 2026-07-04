@@ -301,12 +301,6 @@ export default function LoginPage() {
                                         {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
                                         {isLoading ? 'Signing in...' : 'Sign In'}
                                     </button>
-                                    <p className="text-center text-sm text-gray-500">
-                                        Don't have an account?{' '}
-                                        <Link to="/register" className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">
-                                            Register
-                                        </Link>
-                                    </p>
                                 </form>
                             </div>
                         </div>
