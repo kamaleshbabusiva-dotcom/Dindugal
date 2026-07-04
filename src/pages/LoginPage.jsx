@@ -4,7 +4,7 @@ import { useLanguage } from '../context/LanguageContext'
 import {
     Droplets, Globe, Users, MessageSquare, Activity, TrendingUp,
     Zap, ChevronRight, Languages, Check, Waves, ShieldAlert,
-    Mail, Phone, Eye, EyeOff, ArrowRight, Loader2, AlertCircle
+    Mail, Phone, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, Lock
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -130,14 +130,14 @@ export default function LoginPage() {
                 }} />
             </div>
 
-            <div className="relative z-10 min-h-screen flex flex-col">
+             <div className="relative z-10 min-h-screen flex flex-col">
                 {/* Header */}
-                <nav className="flex items-center justify-between px-8 py-6">
+                <nav className="flex items-center justify-between px-8 py-4 mx-4 my-3 rounded-2xl bg-white/[0.02] border border-white/5 backdrop-blur-md shadow-2xl">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
                             <Waves className="w-6 h-6 text-white" />
                         </div>
-                        <span className="font-display text-2xl font-bold text-white">AquaPure Detect</span>
+                        <span className="font-display text-2xl font-bold text-white tracking-tight">AquaPure Detect</span>
                     </div>
 
                     <div className="flex items-center gap-6">
@@ -145,7 +145,7 @@ export default function LoginPage() {
                         <div className="relative">
                             <button
                                 onClick={() => setShowLangMenu(!showLangMenu)}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all"
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/20 transition-all shadow-md"
                             >
                                 <Languages className="w-4 h-4 text-blue-400" />
                                 <span className="text-sm font-medium">
@@ -181,9 +181,9 @@ export default function LoginPage() {
                             )}
                         </div>
 
-                        <div className="hidden md:flex items-center gap-2">
-                            <span className="text-sm text-gray-400">Advanced Purity Intelligence</span>
-                            <Droplets className="w-4 h-4 text-blue-400" />
+                        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                            <span className="text-xs font-semibold uppercase tracking-wider">Live Intel</span>
                         </div>
                     </div>
                 </nav>
@@ -193,23 +193,24 @@ export default function LoginPage() {
                     <div className="max-w-6xl w-full mx-auto grid lg:grid-cols-2 gap-16 items-center">
                         {/* Left - Auth */}
                         <div className="animate-fade-in">
-                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-6">
+                            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-6 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
                                 <Zap className="w-4 h-4 text-blue-400" />
-                                <span className="text-sm text-gray-300">{t('rev_wellness')}</span>
+                                <span className="text-sm text-blue-300 font-medium">{t('rev_wellness')}</span>
                             </div>
 
-                            <h1 className="font-display text-4xl lg:text-5xl font-black tracking-tight mb-2">
+                            <h1 className="font-display text-4xl lg:text-5xl font-black tracking-tight mb-3 leading-tight">
                                 <span className="text-white">{t('hero_title_1')}</span>
                                 <br />
                                 <span className="gradient-text">{t('hero_title_2')}</span>
                             </h1>
-                            <p className="text-gray-400 mb-8 text-sm">{t('hero_desc')}</p>
+                            <p className="text-gray-400 mb-8 text-sm leading-relaxed">{t('hero_desc')}</p>
 
                             {/* ═══ Role Information ═══ */}
                             <div className="max-w-md mb-6">
-                                <div className="glass-card p-4 border-white/10 bg-gradient-to-r from-blue-500/5 to-indigo-500/5">
+                                <div className="glass-card p-4 border-white/10 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
                                     <div className="flex items-start gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shrink-0 mt-0.5 shadow-lg shadow-blue-500/20">
                                             <ShieldAlert className="w-5 h-5 text-white" />
                                         </div>
                                         <div>
@@ -225,21 +226,21 @@ export default function LoginPage() {
                             </div>
 
                             {/* ═══ Demo Login Buttons ═══ */}
-                            <div className="max-w-md mb-6 space-y-3">
+                            <div className="max-w-md mb-8 space-y-3">
                                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Quick Demo Access</h3>
                                 <div className="grid grid-cols-2 gap-3">
                                     <button
                                         id="demo-admin-login-btn"
                                         onClick={adminDemoLogin}
-                                        className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all font-semibold text-sm cursor-pointer shadow-lg shadow-blue-500/5"
+                                        className="flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl bg-blue-600/10 border border-blue-500/30 text-blue-400 hover:bg-blue-600/20 hover:border-blue-400 hover:scale-[1.02] active:scale-[0.98] transition-all font-semibold text-sm cursor-pointer shadow-lg shadow-blue-500/5"
                                     >
-                                        <ShieldAlert className="w-4 h-4" />
+                                        <ShieldAlert className="w-4 h-4 animate-pulse" />
                                         Demo Admin
                                     </button>
                                     <button
                                         id="demo-citizen-login-btn"
                                         onClick={citizenDemoLogin}
-                                        className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all font-semibold text-sm cursor-pointer shadow-lg shadow-emerald-500/5"
+                                        className="flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-400 hover:scale-[1.02] active:scale-[0.98] transition-all font-semibold text-sm cursor-pointer shadow-lg shadow-emerald-500/5"
                                     >
                                         <Users className="w-4 h-4" />
                                         Demo Citizen
@@ -248,45 +249,50 @@ export default function LoginPage() {
                             </div>
 
                             {/* ═══ Firebase Auth Card ═══ */}
-                            <div className="glass-card p-6 border-white/10 max-w-md">
+                            <div className="glass-card p-8 border-white/10 max-w-md shadow-2xl relative">
+                                <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
                                 {/* Error Message */}
                                 {error && (
-                                    <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2 animate-fade-in">
+                                    <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2 animate-fade-in">
                                         <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
                                         <p className="text-sm text-red-300">{error}</p>
                                     </div>
                                 )}
 
                                 {/* Email/Password Form */}
-                                <form onSubmit={handleEmailLogin} className="space-y-4 animate-fade-in">
+                                <form onSubmit={handleEmailLogin} className="space-y-5 animate-fade-in">
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Email</label>
-                                        <input
-                                            id="login-email"
-                                            type="email"
-                                            value={email}
-                                            onChange={e => setEmail(e.target.value)}
-                                            placeholder="your@email.com"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.08] transition-all text-sm"
-                                            autoComplete="email"
-                                        />
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Email Address</label>
+                                        <div className="relative">
+                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                            <input
+                                                id="login-email"
+                                                type="email"
+                                                value={email}
+                                                onChange={e => setEmail(e.target.value)}
+                                                placeholder="your@email.com"
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.08] focus:ring-2 focus:ring-blue-500/10 transition-all text-sm"
+                                                autoComplete="email"
+                                            />
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Password</label>
                                         <div className="relative">
+                                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                             <input
                                                 id="login-password"
                                                 type={showPassword ? 'text' : 'password'}
                                                 value={password}
                                                 onChange={e => setPassword(e.target.value)}
                                                 placeholder="••••••••"
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.08] transition-all text-sm pr-12"
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-12 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.08] focus:ring-2 focus:ring-blue-500/10 transition-all text-sm"
                                                 autoComplete="current-password"
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
                                             >
                                                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                             </button>
@@ -296,7 +302,7 @@ export default function LoginPage() {
                                         id="email-login-btn"
                                         type="submit"
                                         disabled={isLoading}
-                                        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold transition-all hover:shadow-lg hover:shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white font-bold transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
                                         {isLoading ? 'Signing in...' : 'Sign In'}
