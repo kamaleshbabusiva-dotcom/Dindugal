@@ -120,13 +120,13 @@ export default function LoginPage() {
         <div className="min-h-screen bg-hero-gradient relative overflow-hidden">
             {/* Animated background */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-float" />
-                <div className="absolute top-40 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-                <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '4s' }} />
-                <div className="absolute top-1/2 right-1/4 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl animate-pulse-slow" />
+                <div className="absolute top-10 left-10 w-[450px] h-[450px] bg-blue-500/[0.13] rounded-full blur-[120px] animate-float" />
+                <div className="absolute top-20 right-10 w-[500px] h-[500px] bg-purple-500/[0.13] rounded-full blur-[140px] animate-float" style={{ animationDelay: '2.5s' }} />
+                <div className="absolute bottom-10 left-1/4 w-[400px] h-[400px] bg-cyan-500/[0.12] rounded-full blur-[110px] animate-float" style={{ animationDelay: '5s' }} />
+                <div className="absolute top-1/2 right-1/3 w-[350px] h-[350px] bg-emerald-500/[0.1] rounded-full blur-[100px] animate-pulse-slow" />
                 <div className="absolute inset-0" style={{
-                    backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
-                    backgroundSize: '50px 50px'
+                    backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)',
+                    backgroundSize: '60px 60px'
                 }} />
             </div>
 
@@ -277,7 +277,7 @@ export default function LoginPage() {
                                                      value={email}
                                                      onChange={e => setEmail(e.target.value)}
                                                      placeholder="your@email.com"
-                                                     className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:bg-white/[0.08] focus:ring-4 focus:ring-blue-500/20 transition-all text-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)]"
+                                                     className="w-full bg-white/[0.07] backdrop-blur-md border border-white/10 hover:border-white/20 hover:bg-white/[0.09] rounded-xl pl-11 pr-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:bg-white/[0.1] focus:ring-4 focus:ring-blue-500/25 transition-all text-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"
                                                      autoComplete="email"
                                                  />
                                              </div>
@@ -292,7 +292,7 @@ export default function LoginPage() {
                                                      value={password}
                                                      onChange={e => setPassword(e.target.value)}
                                                      placeholder="••••••••"
-                                                     className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-12 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:bg-white/[0.08] focus:ring-4 focus:ring-blue-500/20 transition-all text-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)]"
+                                                     className="w-full bg-white/[0.07] backdrop-blur-md border border-white/10 hover:border-white/20 hover:bg-white/[0.09] rounded-xl pl-11 pr-12 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:bg-white/[0.1] focus:ring-4 focus:ring-blue-500/25 transition-all text-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"
                                                      autoComplete="current-password"
                                                  />
                                                  <button
