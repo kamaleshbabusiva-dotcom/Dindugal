@@ -3,6 +3,8 @@ import { Camera, RefreshCw, ShieldCheck, AlertTriangle, Heart, MessageSquare, Se
 import NeighborMap from '../components/NeighborMap';
 import WaterNewsWidget from '../components/WaterNewsWidget';
 import { runRoboflowInference } from '../services/roboflowService';
+import * as tf from '@tensorflow/tfjs';
+import * as cocoSsd from '@tensorflow-models/coco-ssd';
 
 export default function CitizenDashboard() {
     const [videoActive, setVideoActive] = useState(false);
@@ -15,11 +17,18 @@ export default function CitizenDashboard() {
     const [pps, setPps] = useState(12);
     const [flowRate, setFlowRate] = useState(4.2);
     const [detectedLogs, setDetectedLogs] = useState([
-        { time: '18:42:01', polymer: 'PET', size: '24μm', confidence: '94%', type: 'Fragment' },
-        { time: '18:42:03', polymer: 'Nylon', size: '85μm', confidence: '89%', type: 'Fiber' }
+        { time: '09:21:42', polymer: 'PET', size: '120μm', confidence: '94%', type: 'Fragment' },
+        { time: '09:18:15', polymer: 'PP', size: '45μm', confidence: '88%', type: 'Fiber' },
+        { time: '09:15:02', polymer: 'PE', size: '200μm', confidence: '91%', type: 'Microbead' },
     ]);
     const [complaint, setComplaint] = useState({ type: 'General', details: '', healthAffected: false });
     const [submitted, setSubmitted] = useState(false);
+    
+    // Load local ML model for macro-bottle tracking
+    const [tfModel, setTfModel] = useState(null);
+    useEffect(() => {
+        cocoSsd.load().then(model => setTfModel(model)).catch(console.error);
+    }, []);
 
     const startCamera = async () => {
         try {
@@ -55,18 +64,40 @@ export default function CitizenDashboard() {
         
         setAnalyzing(true);
         try {
+            let filteredDetections = [];
+            
+            // 1. First run local TensorFlow to precisely detect macro water bottles in the video
+            if (tfModel) {
+                const predictions = await tfModel.detect(video);
+                const bottles = predictions.filter(p => p.class === 'bottle');
+                
+                filteredDetections = bottles.map((b, i) => ({
+                    id: `tf_bottle_${i}`,
+                    class: 'bottle',
+                    confidence: b.score,
+                    bbox: { x: b.bbox[0], y: b.bbox[1], width: b.bbox[2], height: b.bbox[3] },
+                    polymer: { id: 'PET', risk: 'Medium', color: '#ef4444' },
+                    size_um: 150000 // Macro scale
+                }));
+            }
+
+            // 2. Fetch microplastics data from Roboflow in background
             const rawDetectionResult = await runRoboflowInference(base64);
             
-            // Filter to ONLY detect real Plastic Bottles (PET / bottles) from the Roboflow model
-            const filteredDetections = rawDetectionResult.detections.filter(
-                det => det.polymer.id === 'PET' || det.class?.toLowerCase().includes('bottle')
-            );
+            // If local TF didn't find a bottle, fallback to Roboflow's PET
+            if (filteredDetections.length === 0) {
+                filteredDetections = rawDetectionResult.detections.filter(
+                    det => det.polymer.id === 'PET' || det.class?.toLowerCase().includes('bottle')
+                );
+            }
             
             const totalMass = filteredDetections.reduce((s, d) => s + d.size_um * 0.001, 0);
             const filteredConcentration = ((totalMass / 10) * 1000).toFixed(1);
 
             const detectionResult = {
                 ...rawDetectionResult,
+                imageWidth: video.videoWidth,   // Use actual video width for local TF coordinates
+                imageHeight: video.videoHeight,
                 detections: filteredDetections,
                 totalParticles: filteredDetections.length,
                 concentration: filteredConcentration

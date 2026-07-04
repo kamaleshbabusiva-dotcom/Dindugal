@@ -11,6 +11,8 @@
   "dependencies": {
     "@maptiler/sdk": "^3.11.1",
     "@supabase/supabase-js": "^2.45.0",
+    "@tensorflow-models/coco-ssd": "^2.2.3",
+    "@tensorflow/tfjs": "^4.22.0",
     "chart.js": "^4.4.4",
     "chess.js": "^1.0.0-beta.8",
     "firebase": "^12.10.0",
