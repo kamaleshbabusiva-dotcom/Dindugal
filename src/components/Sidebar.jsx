@@ -44,8 +44,8 @@ export default function Sidebar({ isOpen, onClose }) {
         // Family Safety is citizen-only
         if (item.id === 'nav-family' && userRole === 'admin') return false;
         if (userRole === 'admin') return true;
-        // Citizen sees: Home, Scanner, AI Camera, Family Safety, Community, Trends, Quiz
-        return ['nav-monitor', 'nav-scanner', 'nav-aicamera', 'nav-family', 'nav-community', 'nav-trends', 'nav-quiz'].includes(item.id);
+        // Citizen sees: Monitor, Scanner, Family Safety, Community, Trends, Quiz
+        return ['nav-monitor', 'nav-scanner', 'nav-family', 'nav-community', 'nav-trends', 'nav-quiz'].includes(item.id);
     });
 
     return (

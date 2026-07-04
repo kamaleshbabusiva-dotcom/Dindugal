@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Camera, RefreshCw, ShieldCheck, AlertTriangle, Heart, MessageSquare, Send, CheckCircle2, User, Activity, Plus, MapPin, Play, Pause, Video } from 'lucide-react';
 import NeighborMap from '../components/NeighborMap';
 import WaterNewsWidget from '../components/WaterNewsWidget';
+import { runRoboflowInference } from '../services/roboflowService';
 
 export default function CitizenDashboard() {
     const [videoActive, setVideoActive] = useState(false);
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+    const [analyzing, setAnalyzing] = useState(false);
+    const [result, setResult] = useState(null);
     const [selectedFeed, setSelectedFeed] = useState('Kitchen Tap');
     const [purityScore, setPurityScore] = useState(98.4);
     const [pps, setPps] = useState(12);
@@ -16,34 +21,84 @@ export default function CitizenDashboard() {
     const [complaint, setComplaint] = useState({ type: 'General', details: '', healthAffected: false });
     const [submitted, setSubmitted] = useState(false);
 
-    // Live feedback fluctuation simulation
-    useEffect(() => {
-        if (!videoActive) return;
-        
-        const interval = setInterval(() => {
-            // Fluctuate stats
-            setPurityScore(prev => +(prev + (Math.random() * 0.4 - 0.2)).toFixed(1));
-            setFlowRate(prev => +(prev + (Math.random() * 0.2 - 0.1)).toFixed(1));
-            setPps(prev => Math.max(2, Math.min(45, prev + Math.floor(Math.random() * 5 - 2))));
+    const startCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                await videoRef.current.play();
+            }
+        } catch (err) {
+            console.error('Camera access error:', err);
+        }
+    };
 
-            // Append new logs
-            const polymers = ['PET', 'PP', 'PE', 'PVC', 'PS'];
-            const types = ['Fragment', 'Fiber', 'Microbead', 'Pellet'];
-            const randomPolymer = polymers[Math.floor(Math.random() * polymers.length)];
-            const randomType = types[Math.floor(Math.random() * types.length)];
-            const confidence = `${Math.floor(Math.random() * 15 + 82)}%`;
-            const size = `${Math.floor(Math.random() * 220 + 15)}μm`;
+    const stopCamera = () => {
+        if (videoRef.current && videoRef.current.srcObject) {
+            videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+            videoRef.current.srcObject = null;
+        }
+    };
+
+    const captureAndAnalyze = async () => {
+        if (!videoRef.current || !canvasRef.current) return;
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (video.videoWidth === 0) return; // not ready
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        const base64 = dataUrl.split(',')[1];
+        
+        setAnalyzing(true);
+        try {
+            const detectionResult = await runRoboflowInference(base64);
+            setResult(detectionResult);
             
+            // Update stats
+            setPurityScore(Math.max(0, 100 - (parseFloat(detectionResult.concentration) * 2)));
+            setPps(detectionResult.totalParticles);
+            setFlowRate(prev => +(prev + (Math.random() * 0.2 - 0.1)).toFixed(1));
+            
+            // Add to logs
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+            
+            const newLogs = detectionResult.detections.map(det => ({
+                time: timeStr,
+                polymer: det.polymer.id,
+                size: `${det.size_um}μm`,
+                confidence: `${(det.confidence * 100).toFixed(0)}%`,
+                type: det.polymer.risk
+            }));
 
-            setDetectedLogs(prev => [
-                { time: timeStr, polymer: randomPolymer, size, confidence, type: randomType },
-                ...prev.slice(0, 5) // Keep last 6 logs
-            ]);
-        }, 1800);
+            if(newLogs.length > 0) {
+                setDetectedLogs(prev => [...newLogs, ...prev].slice(0, 5));
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        setAnalyzing(false);
+    };
 
-        return () => clearInterval(interval);
+    useEffect(() => {
+        if (videoActive) {
+            startCamera();
+            const interval = setInterval(() => {
+                captureAndAnalyze();
+            }, 3000);
+            return () => {
+                clearInterval(interval);
+                stopCamera();
+            };
+        } else {
+            stopCamera();
+            setResult(null);
+            setAnalyzing(false);
+        }
     }, [videoActive]);
 
     const handleComplaintSubmit = (e) => {
@@ -118,12 +173,17 @@ export default function CitizenDashboard() {
 
                         {/* Viewport Screen */}
                         <div className="relative w-full h-64 bg-dark-950 border border-white/10 rounded-2xl overflow-hidden flex items-center justify-center shadow-[inset_0_4px_24px_rgba(0,0,0,0.8)]">
+                            <video ref={videoRef} className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${videoActive ? 'opacity-100' : 'opacity-0'}`} playsInline muted autoPlay />
+                            <canvas ref={canvasRef} className="hidden" />
+                            
                             {/* Animated Flow background when active */}
-                            {videoActive ? (
+                            {videoActive && (
                                 <div className="absolute inset-0 opacity-20 bg-gradient-to-b from-blue-900/40 via-cyan-900/20 to-transparent pointer-events-none">
                                     <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:100%_8px] animate-[flow-water_4s_linear_infinite]" />
                                 </div>
-                            ) : (
+                            )}
+
+                            {!videoActive && (
                                 <div className="absolute inset-0 bg-dark-950 flex flex-col items-center justify-center text-center p-6 z-10 pointer-events-none">
                                     <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/10 mb-3">
                                         <Video className="w-7 h-7 text-gray-500" />
@@ -133,27 +193,28 @@ export default function CitizenDashboard() {
                                 </div>
                             )}
 
-                            {/* Simulated Bounding Boxes */}
+                            {/* Live AI Bounding Boxes */}
+                            {videoActive && result && result.detections.map((det, i) => {
+                                const x = (det.bbox.x / result.imageWidth) * 100;
+                                const y = (det.bbox.y / result.imageHeight) * 100;
+                                const w = (det.bbox.width / result.imageWidth) * 100;
+                                const h = (det.bbox.height / result.imageHeight) * 100;
+                                return (
+                                    <div key={i} className="absolute border border-cyan-500 rounded-lg animate-pulse flex flex-col justify-between p-1 bg-cyan-500/10 pointer-events-none" style={{ left: `${x}%`, top: `${y}%`, width: `${w}%`, height: `${h}%` }}>
+                                        <span className="text-[7px] text-cyan-400 font-bold bg-dark-950/80 px-1 rounded uppercase tracking-wide w-fit">{det.polymer.id}</span>
+                                        <span className="text-[6px] text-cyan-400 text-right">{(det.confidence * 100).toFixed(0)}%</span>
+                                    </div>
+                                )
+                            })}
+
                             {videoActive && (
                                 <>
-                                    <div className="absolute top-1/4 left-1/3 w-16 h-16 border border-red-500 rounded-lg animate-pulse flex flex-col justify-between p-1 bg-red-500/5">
-                                        <span className="text-[7px] text-red-400 font-bold bg-dark-950/80 px-1 rounded uppercase tracking-wide w-fit">PET Fragment</span>
-                                        <span className="text-[6px] text-red-400 text-right">93%</span>
-                                    </div>
-                                    <div className="absolute bottom-1/3 right-1/4 w-12 h-12 border border-yellow-500 rounded-lg animate-pulse flex flex-col justify-between p-1 bg-yellow-500/5" style={{ animationDelay: '0.8s' }}>
-                                        <span className="text-[7px] text-yellow-400 font-bold bg-dark-950/80 px-1 rounded uppercase tracking-wide w-fit">PP Fiber</span>
-                                        <span className="text-[6px] text-yellow-400 text-right">87%</span>
-                                    </div>
-                                    <div className="absolute top-1/3 right-1/3 w-8 h-8 border border-purple-500 rounded-lg animate-pulse flex flex-col justify-between p-1 bg-purple-500/5" style={{ animationDelay: '1.5s' }}>
-                                        <span className="text-[7px] text-purple-400 font-bold bg-dark-950/80 px-1 rounded uppercase tracking-wide w-fit">PE Bead</span>
-                                        <span className="text-[6px] text-purple-400 text-right">91%</span>
-                                    </div>
                                     {/* Laser scan line */}
-                                    <div className="absolute left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_rgba(6,182,212,0.8)] animate-[scan-beam_3s_linear_infinite]" />
+                                    <div className="absolute left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_rgba(6,182,212,0.8)] animate-[scan-beam_3s_linear_infinite] pointer-events-none" />
                                     {/* Rec light overlay */}
-                                    <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-dark-950/80 px-2 py-0.5 rounded border border-white/5">
+                                    <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-dark-950/80 px-2 py-0.5 rounded border border-white/5 z-20 pointer-events-none">
                                         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
-                                        <span className="text-[8px] font-bold text-white tracking-widest">REC AI</span>
+                                        <span className="text-[8px] font-bold text-white tracking-widest">{analyzing ? 'ANALYZING' : 'REC AI'}</span>
                                     </div>
                                 </>
                             )}
