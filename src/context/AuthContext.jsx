@@ -188,9 +188,10 @@ export const AuthProvider = ({ children }) => {
         }
     }
     const loginWithEmail = async (email, password) => {
-        // Allow only the designated user
-        if (email !== 'shrikeshav37@gmail.com') {
-            const errMsg = 'Login restricted: only shrikeshav37@gmail.com is allowed.';
+        // Allow only the designated admin or user
+        const normalizedEmail = email.toLowerCase().trim();
+        if (normalizedEmail !== 'shrikeshav37@gmail.com' && normalizedEmail !== 'kamaleshbabusiva@gmail.com') {
+            const errMsg = 'Login restricted: unauthorized email address.';
             setAuthError(errMsg);
             throw new Error(errMsg);
         }
