@@ -88,16 +88,16 @@ body {
   .btn-primary {
     @apply px-6 py-3 rounded-xl font-semibold text-white transition-all duration-300;
     background: linear-gradient(135deg, #0c8ee9, #06b6d4);
-    box-shadow: 0 4px 15px rgba(12, 142, 233, 0.4);
+    box-shadow: 0 4px 15px rgba(12, 142, 233, 0.3);
   }
 
   .btn-primary:hover {
-    transform: translateY(-2px);
+    transform: translateY(-2.5px);
     box-shadow: 0 8px 25px rgba(12, 142, 233, 0.5);
   }
 
   .btn-primary:active {
-    transform: translateY(0);
+    transform: translateY(0) scale(0.96);
   }
 
   .btn-secondary {
@@ -106,7 +106,11 @@ body {
 
   .btn-secondary:hover {
     @apply bg-white/20;
-    transform: translateY(-1px);
+    transform: translateY(-1.5px);
+  }
+
+  .btn-secondary:active {
+    transform: translateY(0) scale(0.96);
   }
 
   .zone-emerald {
@@ -134,11 +138,11 @@ body {
   }
 
   .sidebar-link {
-    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 transition-all duration-300 hover:bg-white/5 hover:text-white;
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 transition-all duration-300 hover:bg-white/5 hover:text-white active:scale-[0.97];
   }
 
   .sidebar-link-active {
-    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-white bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30;
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-white bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.15)] active:scale-[0.97];
   }
 }
 
@@ -211,4 +215,25 @@ body {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* Global premium tactile transitions on active clicks */
+button,
+a,
+.glass-card-hover,
+select,
+input[type="submit"],
+.sidebar-link,
+.sidebar-link-active {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease !important;
+}
+
+button:active,
+a:active,
+.glass-card-hover:active,
+select:active,
+input[type="submit"]:active,
+.sidebar-link:active,
+.sidebar-link-active:active {
+  transform: scale(0.96) !important;
 }
